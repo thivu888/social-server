@@ -30,7 +30,7 @@ const UserSchema = new mongoose.Schema(
     },
     coverPicture: {
       type: String,
-      default: "",
+      default: "https://th.bing.com/th/id/R.4f7c1deb33d39351b6d2ce58cb0f0e54?rik=5QV1fKSAf6Btqg&riu=http%3a%2f%2ffc06.deviantart.net%2ffs70%2fi%2f2011%2f268%2fd%2fc%2fhyakuju_sentai_gaoranger_by_blakehunter-d4aw563.jpg&ehk=JsEugq8n0X7hrnhzYUm6CLZjujkrsrHP6PBoyddEQQI%3d&risl=&pid=ImgRaw",
     },
     followers: {
       type: Array,
@@ -60,6 +60,26 @@ const UserSchema = new mongoose.Schema(
       type: Number,
       enum: [1, 2, 3],
     },
+    isOnline:{
+      type:Boolean,
+      default:false
+    },
+    notify:{
+      type:Array,
+      default:[]
+    },
+    RequestAddfriend:{
+      type:Array,
+      default:[]
+    },
+    RequestAddfriendSent:{
+      type:Array,
+      default:[]
+    },
+    friends:{
+      type:Array,
+      default:[]
+    }
     
   },
   { timestamps: true }
