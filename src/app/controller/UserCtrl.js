@@ -103,7 +103,7 @@ const UserCtrl = {
     },
     getuserbyuserid:async(req,res)=>{
         try{
-            const user=await Users.findByOne({user_id:req.params.id}).select('-password')
+            const user=await Users.findOne({user_id:req.params.id}).select('-password')
             if(!user) return res.status(400).json({success:false,msg: "User does not exist."})
     
             res.json({success:true,user})
