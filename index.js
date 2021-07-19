@@ -110,6 +110,7 @@ io.on('connection',async (socket)=>{
     socket.on('likePost',data=>{
         
         setLikes(data.postId,data.userId,data.type).then(res=>{
+            console.log(data)
             socket.emit('getlistliked',res)
         })
       

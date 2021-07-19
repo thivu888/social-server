@@ -26,7 +26,7 @@ const UserSchema = new mongoose.Schema(
     },
     profilePicture: {
       type: String,
-      default: "https://scontent.fhph1-2.fna.fbcdn.net/v/t1.30497-1/143086968_2856368904622192_1959732218791162458_n.png?_nc_cat=1&ccb=1-3&_nc_sid=7206a8&_nc_ohc=ompEzBr_6VQAX8RUAMv&_nc_ht=scontent.fhph1-2.fna&oh=996859bdde452f121803f5badaf10d95&oe=60E7F2F8",
+      default: "https://phanquangvu.tk/fileImage/user.png",
     },
     coverPicture: {
       type: String,
