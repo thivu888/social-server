@@ -7,6 +7,7 @@ router.post('/register',userCtrl.register)
 router.post('/login',userCtrl.login)
 router.get('/getuserbyid/:id',userCtrl.getUserById)
 router.get('/getlistmess/:id',auth,userCtrl.getlistmess)
+router.put('/updateprofile',auth,userCtrl.updateprofile)
 router.put('/update',userCtrl.update)
 router.get('/',auth,userCtrl.getUser)
 
