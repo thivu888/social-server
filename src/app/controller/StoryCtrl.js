@@ -44,7 +44,7 @@ const StoryCtrl={
             newStory=new Story({url,public_id,user:req.body.id})
         }
         await newStory.save();
-        const storys=await Story.find()
+        const storys=await Story.find({})
         res.json({success:true,story:storys})
         } catch (error) {
             return res.status(500).json({success:false,msg:'dang bai that bai'})
@@ -52,7 +52,7 @@ const StoryCtrl={
     },
     getStorys:async(req,res)=>{
         try {
-            const list= await Story.find()
+            const list= await Story.find({})
             res.json({success:true,storys:list})
         } catch (error) {
                 console.log(error)
