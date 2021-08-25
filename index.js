@@ -140,7 +140,6 @@ io.on('connection',async (socket)=>{
             return data;
         }).then(data=>{
             getlistmessRealtime(data.userSend).then((list=>{
-                console.log('vao')
                socket.emit('sever-send-list-mess',list)
             }))
         })
