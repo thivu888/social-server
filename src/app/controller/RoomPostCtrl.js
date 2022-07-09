@@ -7,6 +7,14 @@ const RoomPostCtrl={
         } catch (error) {
             console.log(error)
         }
+    },
+     getRoomByName:async(name)=>{
+        try {
+         const room= await RoomPost.findOne({name:name})
+            return room
+        } catch (error) {
+            console.log(error)
+        }
     }
 }
 

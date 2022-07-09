@@ -1,3 +1,4 @@
+
 require('dotenv').config()
 const express = require('express')
 const http=require('http')
@@ -7,9 +8,9 @@ const cookieParser = require('cookie-parser')
 const path = require('path')
 const db=require('./src/config/db')
 const route=require('./src/routes')
-const {setLikes,setComment,updateCommentPost,getPostNameRoomPost}=require('./src/app/controller/PostCtrl')
-const {getRooms,} =require('./src/app/controller/RoomPostCtrl')
-const {getfullUser,getlistmessRealtime,updatelistmess}=require('./src/app/controller/UserCtrl')
+const {setLikes,setComment,updateCommentPost,getPostNameRoomPost,getPosts}=require('./src/app/controller/PostCtrl')
+const {getRooms,getRoomByName} =require('./src/app/controller/RoomPostCtrl')
+const {getfullUser,getlistmessRealtime,updatelistmess,setOffline,updateNotify,updatelistNotify,updateRequestFriend,updateFriend, removeFriend}=require('./src/app/controller/UserCtrl')
 const {getDataRoom,createRoom,updataRoom,getRoomById}=require('./src/app/controller/RoomChatCtrl')
 db.connect();
 const app = express()
@@ -42,6 +43,7 @@ if(process.env.NODE_ENV === 'production'){
 io.on('connection',async (socket)=>{
      socket.on('joinpages',  id=>{
        socket.join(id)
+       socket.name=id
         console.log('joined')
     })
 
@@ -52,6 +54,8 @@ io.on('connection',async (socket)=>{
         })
 
     })
+   
+   
 
     socket.on('getlistMess',id=>{
         getlistmessRealtime(id).then(list=>{
@@ -71,19 +75,31 @@ io.on('connection',async (socket)=>{
    
     socket.on('sendComment',data=>{
 
-
         setComment(data).then(res=>{
-            console.log(typeof data.room)
-
             io.to(data.room).emit('server-send-comment',res)
         })
-       
+        getRoomByName(data.room).then(res=>{
+            if(res.members.length>0){
+               const list= res.members.filter(item=>item!=data.userId)
+               list.forEach(item=>{
+                   updateNotify({id:item,userSendId:data.userId,idPost:data.room,createAt:data.createAt,userPostId:data.UserCreator}).then(res=>{
+                    socket.to(item).emit('server-send-notify-comment',res)
+                   })
+                   
+                })
+                console.log(data.UserCreator)
+            }
+            
+        })
+        updateNotify({id:data.UserCreator,userSendId:data.userId,idPost:data.room,createAt:data.createAt,userPostId:data.UserCreator}).then(res=>{
+            socket.to(data.UserCreator).emit('server-send-notify-comment',res)
+        })
     }) 
 
   
 
     socket.on('sendComment-rep',data=>{
-     
+        console.log(data)
         updateCommentPost(data).then(res=>{
             socket.join(data.room)
             io.to(data.room).emit('server-send-comment',res)
@@ -92,7 +108,9 @@ io.on('connection',async (socket)=>{
     })
 
     socket.on('likePost',data=>{
-        setLikes(data.postId,data.userId).then(res=>{
+        
+        setLikes(data.postId,data.userId,data.type).then(res=>{
+            console.log(data)
             socket.emit('getlistliked',res)
         })
       
@@ -100,7 +118,14 @@ io.on('connection',async (socket)=>{
 
     socket.on('send-notify-seen-server',data=>{
         updatelistmess(data).then(res=>{
+            console.log('update seen')
             socket.emit('send-notify-seen-client',res)
+        })
+    })
+
+    socket.on('client-send-seen-notify',item=>{
+        updatelistNotify(item).then(res=>{
+            socket.emit('server-send-seen-notify',res)
         })
     })
 
@@ -109,7 +134,6 @@ io.on('connection',async (socket)=>{
             io.to(data.room).emit('sever-send-mess',data)
             return data;
         }).then(data=>{
-            console.log(123)
             getlistmessRealtime(data.toUser).then((list=>{
                socket.broadcast.to(data.toUser).emit('sever-send-notify-mess',list)
             })) 
@@ -139,6 +163,53 @@ io.on('connection',async (socket)=>{
             }
         })
     })
+
+    socket.on('client-send-request-addFriend',data=>{
+        updateRequestFriend(data).then(res=>{
+            io.to(data.toUserId).emit('server-send-notify-add-friend',res.newToUser.RequestAddfriend)
+            io.to(data.userSendId).emit('server-send-request-add-friend',res.newUserSend.RequestAddfriendSent)
+        })
+    })
+
+    socket.on('accept-friend',data=>{
+        if(data.type==false){
+            updateRequestFriend(data).then(res=>{
+                io.to(data.toUserId).emit('server-send-notify-add-friend',res.newToUser.RequestAddfriend)
+                io.to(data.userSendId).emit('server-send-request-add-friend',res.newUserSend.RequestAddfriendSent)
+            })
+        }else{
+            updateFriend(data).then(res=>{
+                io.to(data.toUserId).emit('server-send-notify-add-friend',res.newToUser.RequestAddfriend)
+                io.to(data.userSendId).emit('server-send-request-add-friend',res.newUserSend.RequestAddfriendSent)
+                io.to(data.toUserId).emit('server-send-list-friend',res.newToUser.friends)
+                io.to(data.userSendId).emit('server-send-list-friend-user-sent',res.newUserSend.friends)
+                console.log('den day')
+            })
+        }
+    })
+
+    socket.on('remove-friend',data=>{
+        removeFriend(data).then(res=>{
+                io.to(data.userRemove).emit('server-send-list-friend',res.newUserRemove.friends)
+                io.to(data.toUser).emit('server-send-list-friend-user-sent',res.newToUser.friends)
+        })
+    })
+
+    socket.on('create-post',()=>{
+        io.sockets.emit('create-new-post')
+        // getPosts().then(res=>{
+        //     io.sockets.emit('new-list-post',res)
+        // })
+    })
+
+    socket.on('disconnect',()=>{
+        if(socket.name){
+            setOffline(socket.name).then(res=>{
+                io.sockets.emit('ListUser',res)
+            })
+        }
+    })
+        
 })
 
 const PORT = process.env.PORT || 5000

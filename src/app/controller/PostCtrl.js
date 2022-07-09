@@ -1,8 +1,8 @@
+ 
 const Post = require('../models/Post')
 const RoomPost = require('../models/RoomPost')
 const cloudinary = require('cloudinary')
 const fs = require('fs')
-const { findOneAndUpdate } = require('../models/Post')
 cloudinary.config({
     cloud_name: process.env.CLOUD_NAME,
     api_key: process.env.CLOUD_API_KEY,
@@ -51,7 +51,7 @@ const PostCtrl={
                await newPost.save()
             const newRoomPost=new RoomPost({name:postId.toString()})
             await newRoomPost.save()
-            res.json({success:true,msg:'dang bai thanh cong'})
+            res.json({success:true,msg:'dang bai thanh cong',newpost:newPost})
         } catch (error) {
             return res.status(500).json({success:false,msg:'dang bai that bai'})
         }
@@ -59,7 +59,11 @@ const PostCtrl={
     getPosts:async(req,res)=>{
             try {
                 const posts=await Post.find({}).sort({createdAt:-1});
+                if(res)
                 res.json({success:true,posts})
+                else{
+                    return posts
+                }
             } catch (err) {
                 return res.status(500).json({success:false,msg: err.message})
             }
@@ -99,6 +103,46 @@ const PostCtrl={
         } catch (error) {
             console.log(error)
         }
+    },
+    getpostbyid:async(req,res)=>{
+        try {
+            const post=await Post.findById(req.params.id)
+            res.json({success:true,post:post})
+        } catch (error) {
+            console.log(error)
+        }
+    }
+    ,
+    filecomment:async(req,res)=>{
+        try {
+            const file=req.files.file;
+            if(file.mimetype.includes('image')){
+                cloudinary.v2.uploader.upload(file.tempFilePath, {folder: "post/comment/img"}, async(err, result)=>{
+                    if(err) throw err;
+        
+                    removeTmp(file.tempFilePath)
+        
+                    res.json({public_id: result.public_id, url: result.secure_url,type:'image'})
+                })
+            }
+            if(file.mimetype.includes('video')){
+                await  cloudinary.v2.uploader.upload(file.tempFilePath, 
+                    { resource_type: "video", 
+                      folder:'post/comment/video',
+                      chunk_size: 6000000,
+                      eager: [
+                        { width: 300, height: 300, crop: "pad", audio_codec: "none" }, 
+                        { width: 160, height: 100, crop: "crop", gravity: "south", audio_codec: "none" } ],                                   
+                      eager_async: true},
+                    function(error, result) {
+                        if(error) throw error;
+                        removeTmp(file.tempFilePath)
+                        res.json({public_id: result.public_id, url: result.secure_url,type:'video'})
+                    });
+            }
+        } catch (error) {
+            console.log(error)
+        }
     }
     ,
     updateCommentPost:async(data)=>{
@@ -129,17 +173,30 @@ const PostCtrl={
         }
     }
     ,
-    setLikes:async (idPost,idlike)=>{
+    setLikes:async (idPost,idlike,type)=>{
         try {
             const post= await Post.findById(idPost)
             const list=post.likes;
             let newpost;
-            if(!list.includes(idlike)){
-                list.push(idlike)
+            if(!list.some(item=>item.idlike==idlike)){
+                list.push({idlike,type})
                 newpost= await Post.findByIdAndUpdate(idPost,{likes:[...list]},{new:true});
             }else{
-                const newlist=list.filter(item=>item!=idlike)
+                if(type==''){
+                const newlist=list.filter(item=>item.idlike!=idlike)
                 newpost=  await Post.findByIdAndUpdate(idPost,{likes:[...newlist]},{new:true});
+                }
+                else{
+
+                    let index;
+                    list.forEach((item,i)=>{
+                        if(item.idlike==idlike){
+                            index=i
+                        }
+                    })
+                    list.splice(index,1,{idlike,type})
+                    newpost= await Post.findByIdAndUpdate(idPost,{likes:[...list]},{new:true});
+                }
             }
             return {newpost}
         } catch (err) {
